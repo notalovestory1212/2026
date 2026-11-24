@@ -1,3 +1,5 @@
+index_source.txt
+
 <!doctype html>
 <html lang="zh-HK">
 <head>
@@ -209,6 +211,17 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   border-radius:999px;padding:var(--space-1) var(--space-4);
 }
 
+/* 展覽連結：開場同報告頁共用，跟隨角色主題色 */
+.expo-link{
+  display:inline-block;align-self:center;
+  color:var(--color-accent);font-size:var(--text-xs);letter-spacing:.15em;
+  border:1px solid color-mix(in oklab,var(--color-accent) 35%,transparent);
+  border-radius:999px;padding:var(--space-1) var(--space-4);
+  text-decoration:none;
+  transition:background .18s ease;
+}
+.expo-link:hover{background:color-mix(in oklab,var(--color-accent) 10%,transparent)}
+
 /* --- 天氣報告畫面 --- */
 #report{
   position:fixed;inset:0;z-index:20;overflow-y:auto;
@@ -319,7 +332,8 @@ body.carlos #report{background:radial-gradient(700px 500px at 50% 0%,#3a0e29 0%,
   <div class="sub">「愛情與自我」展覽 · Emotions</div>
   <h1>冇所謂啦</h1>
   <div class="sub">戀愛情緒模擬器</div>
-  <div class="expo-tag">2026年12.12–12.20 ｜ 逸東酒店</div>
+  <div class="expo-tag">12-20.12.2026 | 香港逸東酒店</div>
+  <a class="expo-link" href="https://www.instagram.com/not_a.love.story/" target="_blank" rel="noopener noreferrer">了解展覽</a>
   <p class="credit">呢個模擬器模擬嘅唔係愛情，<br>係你喺愛情入面嘅自己。</p>
   <button id="start-btn">開始</button>
   <div class="hint">約 7 分鐘 ｜ 對象隨機 ｜ 冇「啱嘅答案」，只有「你嘅答案」</div>
@@ -1151,8 +1165,9 @@ async function showReport(){
     <p class="summary">${extra?'<span class="kayline">'+extra+'</span>':''}<span class="lyric">${p.q}</span>${p.s ? '<span class="song">——' + p.s + '</span>' : ''}<br>${p.l}</p>
     <p class="fine">呢個係藝術體驗，唔係心理評估。<br>你嘅情緒，你自己先係專家。</p>
     <div class="expo">
-      <p>而家，歡迎喺2026年12.12–12.20到訪逸東酒店。</p>
+      <p>而家，歡迎喺12-20.12.2026到訪香港逸東酒店。</p>
       <p>探索愛情同自我之間嘅關係。</p>
+      <a class="expo-link" href="https://www.instagram.com/not_a.love.story/" target="_blank" rel="noopener noreferrer">了解展覽</a>
     </div>
     <div class="row">
       <button id="again-btn">再玩一次</button>
@@ -1209,3 +1224,4 @@ $('#start-btn').onclick = async ()=>{
 </script>
 </body>
 </html>
+Cannot edit in read-only editor
