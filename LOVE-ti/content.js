@@ -51,9 +51,9 @@ window.LOVE_TI_CONTENT = {
     exhibitionVenue: '尖沙咀逸東酒店',
     exhibitionBtn: '了解展覽 ↗',
     /* ↓ 之後把這裡改成展覽的 IG 頁面網址即可 */
-    exhibitionUrl: 'https://www.instagram.com/',
+    exhibitionUrl: 'https://www.instagram.com/not_a.love.story/',
     /* ↓ 取得展覽網址後，把「（連結未補）」替換掉即可 */
-    exhibitionLink: '（連結未補）',
+    exhibitionLink: 'https://www.instagram.com/not_a.love.story/',
 
     shareCaption: '我的 LOVE-ti 戀愛人格是「{name}」♥️\n🎵「{lyric}」\n〈{song}〉唱：{singer}  曲：{composer} 詞：{lyricist}\n來測測你的戀愛人格 → {url}\n\n💕 *{exhibitionTitle}*\n{exhibitionDate}｜{exhibitionVenue}\n{slogan}\n了解展覽：{exhibitionLink}',
     toastCopy: '結果文字與連結已複製，去放閃吧 ♥',
