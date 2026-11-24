@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>冇所謂啦 — 戀愛情緒模擬器</title>
+
+<!-- 字體：Noto Sans HK（對白）+ Noto Serif HK（旁白） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@300;400;500;700&family=Noto+Serif+HK:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   第一部分：CSS（負責個樣）
+   你想改色、改字體、改泡疹形狀，全部喺呢度。
+   ============================================================ */
+
+/* --- 設計代幣：一次過定義全站顏色/字級/間距 --- */
+:root{
+  /* 深夜香港配色 */
+  --color-bg:#0e1116;            /* 頁面最底色（深夜） */
+  --color-surface:#151a20;       /* 背景一層 */
+  --color-bubble-l:#1e252d;      /* 對方（左）訊息泡 */
+  --color-bubble-r:#1f5045;      /* 你（右）訊息泡 */
+  --color-text:#eae8e1;          /* 主文字色 */
+  --color-text-muted:#93a0ab;     /* 次要文字 */
+  --color-nar:#b9c4cd;           /* 旁白色（霧藍） */
+  --color-accent:#e6b968;        /* 強調色（晚霞金） */
+  --color-divider:#2a323b;
+
+  /* 字級（流動式，手機桌面都啱用）
+     注意：clamp() 入面嘅 + 號前後必須有空格，唔係成句會失效！ */
+  --text-xs:clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-sm:clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+  --text-base:clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-lg:clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+  --text-xl:clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+
+  /* 間距（4px系統） */
+  --space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;--space-4:1rem;
+  --space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;
+
+  --radius-md:0.5rem;
+  --radius-lg:0.75rem;
+  --radius-bubble:1.1rem;
+
+  --font-body:'Noto Sans HK','PingFang HK','Microsoft JhengHei',sans-serif;
+  --font-nar:'Noto Serif HK','PingFang HK',serif;
+}
+
+/* --- 基礎 reset --- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:none;-webkit-font-smoothing:antialiased}
+body{
+  min-height:100dvh;
+  font-family:var(--font-body);
+  font-size:var(--text-base);
+  color:var(--color-text);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #1a2230 0%, transparent 60%),
+    var(--color-bg);
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--color-accent);outline-offset:3px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+/* --- 手機框：手機直上一個chat app嘅感覺，桌面就中間一個「電話」 --- */
+#app{
+  max-width:430px;margin:0 auto;
+  height:100dvh;               /* 固定高度：令對話區自己scroll，唔係成個頁面長 */
+  display:flex;flex-direction:column;
+  background:var(--color-surface);
+}
+@media (min-width:520px){
+  #app{
+    height:92dvh;margin:4dvh auto;border-radius:var(--radius-lg);
+    overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);
+    border:1px solid var(--color-divider);
+  }
+}
+
+/* --- 頂部 bar --- */
+#chat-header{
+  display:flex;align-items:center;gap:var(--space-3);
+  padding:var(--space-3) var(--space-4);
+  background:rgba(14,17,22,.85);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--color-divider);
+  position:sticky;top:0;z-index:5;
+}
+#avatar{
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,#2a3f55,#1f5045);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;color:var(--color-accent);font-size:var(--text-sm);
+}
+#who{display:flex;flex-direction:column;line-height:1.3}
+#who .name{font-weight:500;font-size:var(--text-sm)}
+#who .status{font-size:var(--text-xs);color:var(--color-text-muted)}
+
+/* --- 對話區 --- */
+#stage{
+  flex:1;min-height:0;   /* min-height:0 係關鍵：俾 flex 子元素真正縮細 + 內部scroll */
+  overflow-y:auto;padding:var(--space-4) var(--space-3) var(--space-8);
+  display:flex;flex-direction:column;gap:var(--space-3);
+  scroll-behavior:smooth;
+}
+
+/* 旁白（襯線體、置中、霧藍色） */
+.nar{
+  font-family:var(--font-nar);
+  color:var(--color-nar);
+  text-align:center;
+  max-width:34ch;margin-inline:auto;
+  font-size:var(--text-base);
+  line-height:1.9;
+  animation:fadeIn .5s ease both;
+}
+.nar.big{font-size:var(--text-lg);color:var(--color-text);font-weight:600}
+.nar.feel{color:var(--color-accent);font-size:var(--text-sm)}
+
+/* 【系統】提示框 */
+.sysprompt{
+  align-self:center;text-align:center;
+  font-size:var(--text-xs);color:var(--color-accent);
+  border:1px solid color-mix(in oklab,var(--color-accent) 35%,transparent);
+  border-radius:999px;padding:var(--space-1) var(--space-4);
+  animation:fadeIn .4s ease both;
+}
+
+/* 訊息泡 */
+.msg{display:flex;flex-direction:column;max-width:78%;animation:popIn .35s ease both}
+.msg.L{align-self:flex-start}
+.msg.R{align-self:flex-end;align-items:flex-end}
+.msg .name{font-size:var(--text-xs);color:var(--color-text-muted);margin:0 var(--space-2) var(--space-1)}
+.msg .bubble{
+  padding:var(--space-2) var(--space-3);
+  border-radius:var(--radius-bubble);
+  font-size:var(--text-base);line-height:1.7;
+  white-space:pre-wrap;word-break:break-word;
+}
+.msg.L .bubble{background:var(--color-bubble-l);border-bottom-left-radius:4px}
+.msg.R .bubble{background:var(--color-bubble-r);border-bottom-right-radius:4px}
+.msg .meta{font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1);padding:0 var(--space-1)}
+
+/* 「輸入中…」動畫（真嘅 <span>，唔係 div） */
+.typing{display:flex;gap:5px;padding:var(--space-3) var(--space-4)}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--color-text-muted);animation:blink 1.2s infinite;display:inline-block}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+
+/* 天氣小徽章 */
+.chip{
+  align-self:center;display:flex;align-items:center;gap:var(--space-2);
+  font-size:var(--text-xs);color:var(--color-text-muted);
+  background:rgba(255,255,255,.04);border:1px solid var(--color-divider);
+  padding:var(--space-1) var(--space-3);border-radius:999px;
+  animation:fadeIn .5s ease both;
+}
+
+/* --- 選項按鈕區 --- */
+#choicebox{padding:var(--space-3) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:var(--space-2)}
+#choicebox:empty{padding:0}
+.opt{
+  text-align:left;
+  padding:var(--space-3) var(--space-4);
+  background:var(--color-surface);
+  border:1px solid var(--color-divider);
+  border-radius:var(--radius-md);
+  font-size:var(--text-sm);line-height:1.6;
+  transition:border-color .18s ease,transform .18s ease,background .18s ease;
+  animation:fadeIn .35s ease both;
+}
+.opt:hover{border-color:var(--color-accent);background:rgba(230,185,104,.06)}
+.opt:active{transform:scale(.985)}
+
+/* --- 開場畫面 --- */
+#title{
+  position:fixed;inset:0;z-index:20;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--space-6);text-align:center;
+  background:
+    radial-gradient(800px 500px at 50% 20%, #1c2735 0%, transparent 65%),
+    var(--color-bg);
+  padding:var(--space-8);
+  animation:fadeIn .8s ease both;
+}
+#title h1{
+  font-family:var(--font-nar);font-weight:600;
+  font-size:clamp(2.2rem,10vw,3.4rem);
+  letter-spacing:.08em;color:var(--color-text);
+}
+#title .sub{color:var(--color-nar);font-size:var(--text-sm);letter-spacing:.2em}
+#title .credit{color:var(--color-text-muted);font-size:var(--text-xs);max-width:30ch;line-height:1.8}
+#start-btn{
+  padding:var(--space-3) var(--space-10);
+  border:1px solid var(--color-accent);color:var(--color-accent);
+  border-radius:999px;font-size:var(--text-sm);letter-spacing:.3em;
+  transition:background .18s ease,color .18s ease;
+}
+#start-btn:hover{background:var(--color-accent);color:#141009}
+#title .hint{color:var(--color-text-muted);font-size:var(--text-xs)}
+#title .expo-tag{
+  color:var(--color-accent);font-size:var(--text-xs);letter-spacing:.15em;
+  border:1px solid color-mix(in oklab,var(--color-accent) 35%,transparent);
+  border-radius:999px;padding:var(--space-1) var(--space-4);
+}
+
+/* --- 天氣報告畫面 --- */
+#report{
+  position:fixed;inset:0;z-index:20;overflow-y:auto;
+  display:flex;flex-direction:column;align-items:center;
+  gap:var(--space-6);text-align:center;padding:var(--space-8) var(--space-6);
+  background:
+    radial-gradient(700px 500px at 50% 0%, #22303f 0%, transparent 70%),
+    var(--color-bg);
+  animation:fadeIn .8s ease both;
+}
+/* 用 margin:auto 做置中：內容細過螢幕時置中，大過螢幕時正常咁scroll（唔會裁頂） */
+#report::before,#report::after{content:'';margin-block:auto;flex:0 0 0;}
+#report h2{font-family:var(--font-nar);font-size:var(--text-lg);color:var(--color-text);font-weight:600}
+#report .grid{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--space-3);max-width:340px}
+.wcard{
+  display:flex;flex-direction:column;align-items:center;gap:var(--space-1);
+  border:1px solid var(--color-divider);border-radius:var(--radius-md);
+  padding:var(--space-4) var(--space-6);min-width:130px;
+  background:rgba(255,255,255,.03);
+}
+.wcard .icon{font-size:1.8rem}
+.wcard .n{font-family:var(--font-nar);font-size:var(--text-xl);color:var(--color-text)}
+.wcard .lab{font-size:var(--text-xs);color:var(--color-text-muted)}
+#report .summary{font-family:var(--font-nar);color:var(--color-nar);font-size:var(--text-base);max-width:30ch;line-height:2}
+#report .summary .lyric{color:var(--color-accent)}
+#report .summary .song{color:var(--color-text-muted);font-size:var(--text-sm);margin-left:var(--space-2);white-space:nowrap}
+#report .expo{
+  border-top:1px solid var(--color-divider);padding-top:var(--space-4);
+  color:var(--color-nar);font-size:var(--text-sm);line-height:2;max-width:32ch;
+}
+#report .fine{font-size:var(--text-xs);color:var(--color-text-muted);max-width:34ch;line-height:1.8}
+#report .row{display:flex;gap:var(--space-3);flex-wrap:wrap;justify-content:center}
+#report button{
+  padding:var(--space-2) var(--space-6);border-radius:999px;
+  border:1px solid var(--color-divider);color:var(--color-text-muted);font-size:var(--text-sm);
+  transition:color .18s ease,border-color .18s ease;
+}
+#report button:hover{color:var(--color-accent);border-color:var(--color-accent)}
+
+/* --- Kay 主題（隨機角色：灰藍+白） --- */
+body.kay{
+  --color-bg:#0f151d;
+  --color-surface:#151d28;
+  --color-bubble-l:#1e2937;
+  --color-bubble-r:#2f4d6b;
+  --color-text:#eef2f7;
+  --color-text-muted:#9fb0c0;
+  --color-nar:#c5d2e0;
+  --color-accent:#9cc4e4;
+  --color-divider:#2a3646;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #1b2a3e 0%, transparent 60%),
+    var(--color-bg);
+}
+body.kay #chat-header{background:rgba(15,21,29,.85)}
+body.kay #avatar{background:linear-gradient(135deg,#33465e,#2f4d6b)}
+body.kay .opt:hover{border-color:var(--color-accent);background:rgba(156,196,228,.08)}
+body.kay #report{
+  background:
+    radial-gradient(700px 500px at 50% 0%, #22334a 0%, transparent 70%),
+    var(--color-bg);
+}
+/* Kay 嘅角色總結句：放喺歌詞前 */
+#report .summary .kayline{display:block;color:var(--color-nar);margin-bottom:var(--space-2)}
+
+
+/* Carlos：桃紅 × 黑色，僅在抽中 Carlos 時套用 */
+body.carlos{
+  --color-bg:#080509;--color-surface:#100a11;
+  --color-bubble-l:#381126;--color-bubble-r:#b91e70;
+  --color-text:#fff1f8;--color-text-muted:#c89cb4;
+  --color-nar:#efb3d1;--color-accent:#ff4da6;
+  --color-divider:#4b2039;
+  background:radial-gradient(900px 600px at 50% -15%,#4c1232 0%,transparent 65%),#080509;
+}
+body.carlos #chat-header{background:rgba(13,5,12,.92)}
+body.carlos #avatar{background:linear-gradient(135deg,#ff65b8,#7b1048);color:#fff}
+body.carlos .opt:hover{border-color:#ff4da6;background:rgba(255,77,166,.12)}
+body.carlos #report{background:radial-gradient(700px 500px at 50% 0%,#3a0e29 0%,transparent 70%),#080509}
+
+/* --- 動畫 keyframes --- */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes popIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     第二部分：HTML（頁面骨幹）
+     得三個主要元素：頂bar、對話區、選項區。
+     之後所有嘢（對白、旁白、選項）都係由 JS 動態加落去。
+     ============================================================ -->
+<div id="app">
+  <header id="chat-header">
+    <div id="avatar">C</div>
+    <div id="who">
+      <span class="name" id="h-name">阿Chak</span>
+      <span class="status" id="h-status">上線</span>
+    </div>
+  </header>
+  <main id="stage"></main>
+  <div id="choicebox"></div>
+</div>
+
+<!-- 開場畫面 -->
+<div id="title">
+  <div class="sub">「愛情與自我」展覽 · Emotions</div>
+  <h1>冇所謂啦</h1>
+  <div class="sub">戀愛情緒模擬器</div>
+  <div class="expo-tag">2026年12.12–12.20 ｜ 逸東酒店</div>
+  <p class="credit">呢個模擬器模擬嘅唔係愛情，<br>係你喺愛情入面嘅自己。</p>
+  <button id="start-btn">開始</button>
+  <div class="hint">約 7 分鐘 ｜ 對象隨機 ｜ 冇「啱嘅答案」，只有「你嘅答案」</div>
+</div>
+
+<script>
+/* ============================================================
+   第三部分：JavaScript（成個遊戲嘅引擎同劇本）
+
+   想睇明個結構，記住三樣嘢：
+   1. 狀態（state）—— 記低你嘅選擇同天氣
+   2. 小工具（nar / msg / pick …）—— 負責顯示對白同收集選擇
+   3. 角色資料（CHARS）+ 章節函數 —— 阿Chak / Kay / Carlos 三套劇本，
+      開波嗰陣隨機抽一個（#kay / #chak / #carlos 可以強制指定，方便測試示範）
+   ============================================================ */
+
+/* ---------- 1. 狀態：全遊戲記憶 ---------- */
+const state = {
+  weather:{ sun:0, fog:0, storm:0, damp:0 }, // 晴/霧/雷/潮
+  ch2_reply:null,   // 第2章你覆咗咩（第4章回調用）
+  ch2_feel:null,    // 第2章你嘅感受（第4章回調用）
+  ch2_send:null,    // 第2章你實際send咗嗰句（第4章原句重播）
+  ch4_reply:null,   // 第4章你揀咗刪定send（Kay結局A有條件句）
+  ending:null,
+};
+
+/* ---------- 2. 角色 ---------- */
+const CHARS = {
+
+/* ===== 阿Chak（主線 v1.3）===== */
+chak:{
+  key:'chak', name:'阿Chak', avatar:'C', theme:null, status:'上線',
+  ch0:{
+    card:[
+      '阿Chak，27，Programmer，住深水埗。',
+      '朋友介紹識，傾開先發現大家聽開同一隊band。',
+      '已讀不回大師 —— 但會記得你三個禮拜前講過、你自己都唔記得咗嘅小事。',
+    ],
+  },
+  ch1:{
+    sys:'23:47 · 第一章',
+    scene:['你啱啱沖完涼，攤喺床上面。手機震咗一下。','佢今晚主動send嘢嚟，已經係意料之外。'],
+    opener:'你今日點呀？',
+    feels:[
+      {t:'攰到散：返足九個鐘，老細臨放工先嚟料',v:1},
+      {t:'嬲到癲：屋企人嘅事，諗起仲嬲',v:2},
+      {t:'個心空空：講唔出點解，就係好寂寞',v:3},
+      {t:'其實幾好',v:4},
+    ],
+    feelName:['攰到散','嬲到癲','個心空空','其實幾好'],
+    truth:[
+      '其實今日好攰，唔係嗰種瞓一覺就會好返嘅攰',
+      '今日嬲到癲，屋企嘅事，而家諗起仲嬲',
+      '講唔出點解，就係覺得好寂寞',
+      '其實今日幾好，啱啱先醒起要話你知',
+    ],
+    replies:[
+      {t:'講真',v:1},
+      {t:'「ok啦 😅」',v:2,send:'ok啦 😅'},
+      {t:'「你先啦？你今日點？」',v:3,send:'你先啦？你今日點？'},
+      {t:'（react一個emoji）',v:4,send:'😂'},
+    ],
+    b1:{
+      pre:['（阿Chak 輸入中…… 停咗。再輸入中。）','一分鐘後，你手機響 —— 係佢打電話嚟。'],
+      phone:['喂？……你把聲好似好攰。','喂？咩事呀？','喂？屋企冇事啩？','喂？咁就好啦，哈哈。'],
+      post:['傾咗二十分鐘，冇咩重點。','但你嗰晚瞓得好好。'],
+    },
+    b2:{
+      reply:'ok就好 😊',
+      ok:['你冇講大話，只係講得簡單。','有啲嘢唔使長篇大論。'],
+      bad:['佢真係信咗。或者假裝信咗。','你分唔出。可能佢都分唔出。'],
+    },
+    b3:{
+      reply:'今日返咗一日工，冇咩特別。你呢？',
+      nars:['佢講佢今日嘅嘢，你一路聽。','對話好自然地一直繼續，傾到瞓覺。','只係今晚你自己嗰部份，暫時未講。'],
+    },
+    b4:{
+      reply:'😂😂',
+      ok:['你哋簡簡單單咁完咗一日。幾好。'],
+      bad:['之後冇再講嘢。','你望住嗰三個笑到喊嘅emoji，唔知點解，有啲失落。'],
+    },
+  },
+  ch2:{
+    sys:'一個禮拜後 · 星期六 · 第二章',
+    scene:['你哋約咗15:00深水埗出口等。','行下，食下，佢話想帶你去嗰間佢由中學食到而家嘅車仔麵。','14:02。你半個鐘前先執完樣。手機震。'],
+    opener:'唔好意思……今日真係去唔到，公司爆咗單大事要留低救火 😔 對唔住',
+    feels:[
+      {t:'好失望：你期待咗成個禮拜',v:1},
+      {t:'鬆一口氣：你其實唔知點解，可能驚真人見面冇嘢傾',v:2},
+      {t:'嬲：次次都係咁',v:3},
+      {t:'唔sure：分唔清自己咩感覺',v:4},
+    ],
+    feelName:['好失望','鬆一口氣','嬲','唔sure'],
+    truth:[
+      '我其實有啲失望。唔係嬲你，係我真係好想見你。',
+      '其實我都唔係好想去。我驚真人見面冇嘢傾。',
+      '我嬲。唔係嬲你，係嬲啲安排次次都係咁。',
+      '我唔知自己想唔想去。但我想話你知，而唔係扮冇事。',
+    ],
+    replies:[
+      {t:'「冇所謂啦 😊 下次先」',v:1,send:'冇所謂啦 😊 下次先'},
+      {t:'「發生咩事呀？嚴唔嚴重？」',v:2,send:'發生咩事呀？嚴唔嚴重？'},
+      {t:'講出你心入面嗰句',v:3},
+      {t:'「咁不如聽日？我聽日得」',v:4,send:'咁不如聽日？我聽日得'},
+    ],
+    b1:{
+      msg:'OK 😅 下次補返',
+      pre:['你覆咗個👍。'],
+      f2:['對你嚟講，呢句唔係大話 —— 你真係覺得OK。','你哋就咁樣完咗一日。'],
+      f4:['你唔知自己想唔想去，所以「冇所謂」講得特別順。'],
+      f3:['你覆咗個👍，然後閂咗個chat。','你嘅嬲，連一個字都冇講出口。'],
+      f1:['成個下晝你對住天花板，個心有啲空。','佢唔知你失望。','因為你冇講。'],
+    },
+    b2:{
+      pre:['（已讀。兩分鐘後先回。）'],
+      msg:'……唔算大事，救緊。今日真係對唔住。',
+      post:['你feel到呢句嘢有啲唔完整。','但你揀咗唔追問。'],
+      f1:['你嘅失望，留喺你自己度。'],
+      f2:['就咁過咗一日。你冇講嘅嘢，你自己知就得。'],
+    },
+    b3:{
+      perFeel:[
+        {pre:['（已讀。）','一分鐘。五分鐘。十五分鐘。'],msgs:['對唔住。我都想見你。'],post:['呢十五分鐘好長，但至少嗰句嘢係真嘅。']},
+        {pre:['（已讀。）'],msgs:['……多謝你講真話。下次想去先去，唔使勉強。'],post:['原來講咗出口，係咁嘅感覺。']},
+        {pre:['（已讀。）'],msgs:['對唔住。我知我嘅時間好難夾。'],post:['你嘅嬲有咗出口。佢接住咗。']},
+        {pre:['（已讀。）'],msgs:['唔使即刻決定嘅。想去先去。'],post:['「唔知」講咗出口，都算係一種講真話。']},
+      ],
+    },
+    b4:{
+      msg:'好呀聽日！',
+      nars:['回得好快。快到你懷疑佢係咪一早諗定今日走唔到。','你想問，但最後冇問。'],
+    },
+  },
+  ch3:{
+    sys:'三個禮拜後 · 星期三 23:15 · 第三章',
+    scene:['你哋見咗兩次面。','第二次，你哋去咗西環海旁。傾得好地地。佢送你入閘嗰下，捉住咗你手踭，又鬆開。','之後嗰個禮拜，佢回覆由「即刻」變返做「三個鐘」。','星期三，23:15。手機震。'],
+    opener:'有樣嘢想講好耐。我覺得我哋咁樣相處好舒服。不如……唔使咁快定義我哋係咩關係，ok ma？',
+    feels:[
+      {t:'心寒：你想要嘅唔係咁',v:1},
+      {t:'舒服：唔使交戲，啱啱好',v:2},
+      {t:'混亂：你想要啲咩，你自己都唔知',v:3},
+      {t:'解脫：終於有人講咗出口',v:4},
+    ],
+    feelName:['心寒','舒服','混亂','解脫'],
+    want:[
+      '我唔係好想要「唔定義」。我想要嘅係認真、清清楚楚嗰種。',
+      '我都覺得咁樣比較舒服。不過想話你知：舒服，唔代表我唔重視。',
+      '我仲未諗清楚自己想要咩。但我想同你一齊慢慢諗。',
+      '多謝你講咗出口。我其實都覺得咁樣啱啱好。',
+    ],
+    replies:[
+      {t:'「ok呀 😊」',v:1,send:'ok呀 😊'},
+      {t:'講出你想要咩',v:2},
+      {t:'「俾我諗一諗，聽日覆你」',v:3,send:'俾我諗一諗，聽日覆你'},
+      {t:'「你講咩呀 😂 我邊有諗過呢啲」',v:4,send:'你講咩呀 😂 我邊有諗過呢啲'},
+    ],
+    b1:{
+      msg:'😊😊',
+      ok:['你哋繼續「咁樣」。','而家有咗共識：唔定義，唔代表唔重視。'],
+      bad:['就咁完咗個topic。你哋繼續「咁樣」——','只係你嗰邊嘅答案，同你心入面嗰個，未必係同一個。'],
+    },
+    b2:{
+      pre:'（輸入中…… 停咗。又輸入中。又停咗。）',
+      perFeel:[
+        {msgs:['我驚我俾唔到你想要嘅嘢。','但好彩你肯同我講。'],post:['呢句嘢未必代表有下文，但佢係真嘅。']},
+        {msgs:['我都係。舒服，但唔代表隨便。'],post:['你哋講嘅係同一個意思，只不過呢次講咗出口。']},
+        {msgs:['好呀，慢慢嚟，唔急。'],post:['「未諗清楚」講咗出口，原來唔使尷尬。']},
+        {msgs:['😊 咁我放心。'],post:['兩個人都想咁樣。講咗出口，先知。']},
+      ],
+    },
+    b3:{
+      msg:'好，慢慢諗，唔急。',
+      nars:['你諗咗成個禮拜。','有一日你可能會發現：','你諗緊嘅，唔止係佢。'],
+    },
+    b4:{
+      msg:'😂 好啦好啦',
+      pre:'然後佢轉咗話題。',
+      ok:['你笑住咁講，因為你真係唔想呢個topic繼續落去。','佢get到。'],
+      bad:['個topic就咁跳咗。','你哋心照。'],
+    },
+  },
+  ch4:{
+    intro:['你係阿Chak。','返返去嗰個星期六。14:02。','俾你睇下，你嗰日冇講出口嘅嘢。'],
+    truth:[
+      '公司冇爆單大事。',
+      '係阿嫲朝早入咗醫院。你朝九晚十一，醫院同公司兩邊走。',
+      '你唔想話佢知。親人嘅嘢，一講就要解釋、就要俾人擔心。',
+      '你打：「對唔住今日去唔到」。打咗，睇下，del咗。打咗，又del咗。',
+      '你最後send咗「公司爆咗單大嘅」。',
+      '因為工作嘅藉口，最唔使解釋。',
+    ],
+    replay:{
+      r1:['你望住「冇所謂啦 😊」呢四隻字。','你鬆一口氣 —— 佢冇嬲。','但你又有一種古怪嘅空虛：','原來你咁辛苦，都可以「冇所謂」。'],
+      r2:['你望住「發生咩事呀？」','你打咗「阿嫲入咗醫院」。望咗一陣。del咗。','你覆「唔算大事」。'],
+      r3:[
+        ['你望住「我真係好想見你」。','你喺醫院走廊企咗好耐。','呢句嘢，係你成個禮拜入面，','唯一一個令你唔覺得攰嘅嘢。'],
+        ['你望住「我都唔係好想去」。','你鬆一口氣 —— 佢冇嬲你咁諗。','你仲有啲慚愧：原來佢都驚。'],
+        ['你望住「我嬲」。','你唔係嬲佢嬲到而家。','係嬲自己，點解要用工作做藉口。'],
+        ['你望住「我唔知自己想唔想去」。','原來一句「唔知」，','都可以俾人咁大空間。'],
+      ],
+      r4:['你望住「不如聽日？」','你諗：未知聽日阿嫲掂唔掂。','你覆「好呀」。','然後開始諗，聽日點樣再講一次大話。'],
+    },
+    backSys:'【而家，返返嚟。你仍然係阿Chak。今晚】',
+    tonight:[
+      '阿嫲情況穩定咗。你望住同佢個chat，打咗一行字：「嗰日……唔係公司嘅事。」',
+      '你個手指停咗喺send上面。',
+      '知道你有苦衷，唔代表佢之前嘅失望唔成立；',
+      '亦都唔代表，佢一定要繼續。',
+      '呢個係佢會面對嘅嘢。但你揀幾多，係你嘅事。',
+      '（呢個選擇唔計入你嘅天氣報告，只係一面鏡）',
+    ],
+    choices:[
+      {t:'Del咗佢：「佢唔使知道。而家唔使。」',v:1},
+      {t:'Send咗：「嗰日唔係公司嘅事。遲啲話你知。」',v:2,send:'嗰日唔係公司嘅事。遲啲話你知。'},
+      {t:'Send咗：「嗰日係我阿嫲入咗醫院。我而家喺醫院走廊等緊。」',v:3,send:'嗰日係我阿嫲入咗醫院。我而家喺醫院走廊等緊。'},
+    ],
+    d1:['你鎖屏。','你冇講嘅嘢唔會消失，佢會喺度等。','等你下一日、下一個月，或者下一次繃唔住嗰日。'],
+    d2:{pre:['你send咗。','好快後悔，但又有一種輕咗嘅感覺。','「遲啲話你知」呢五隻字，係你今日講過最真嘅一句。'],msg:'唔急。你OK嗎？',post:['你望住呢三隻字，唔知點解，眼濕濕。']},
+    d3:{pre:['你send咗。然後閉埋眼等。'],msg:'而家好返啲未？',post:['冇質問，冇「點解你頭先呃我」。','你哋就咁，由呢句嘢開始，講返嗰一日。']},
+  },
+  ch5:{
+    sys:'一個月後 · 中環碼頭 · 傍晚 · 最終章',
+    scene:['佢約你出嚟「傾下嘢」。','海風好大。佢望住隻船，唔係望住你。'],
+    choices:[
+      {t:'「我想試下認真一齊。唔係因為啱啱好，係因為我想。」',v:'A',send:'我想試下認真一齊。唔係因為啱啱好，係因為我想。'},
+      {t:'「我想要嘅相處節奏，同你而家可以俾嘅唔同。我想喺呢度停。」',v:'B',send:'我想要嘅相處節奏，同你而家可以俾嘅唔同。我想喺呢度停。'},
+      {t:'「而家咁樣幾好。」',v:'C',send:'而家咁樣幾好。'},
+      {t:'「我暫時唔想開始一段關係，想留返啲時間俾自己。」',v:'D',send:'我暫時唔想開始一段關係，想留返啲時間俾自己。'},
+    ],
+    endings:{
+      A:{msgs:['……我都想。','你知唔知，你頭先嗰句，係我識你以嚟，聽過你最真嘅一句。'],nars:['拍拖唔係童話。','係兩個唔識講嘢嘅人，慢慢學識講。','你哋一齊嘅第一個月已經有交嗌 —— 為咗「你頭先點解已讀不回」。','但呢一次，你哋講嘅，全部係真話。']},
+      B:{nars:['你喺碼頭望住佢行遠。','唔係每段相遇都要有結局。','有啲人出現，係為咗話你知：你想被人點樣對待。','手機震，係friend問你去唔去唱K。','你覆：「去。」','雨停咗。']},
+      C:{nars:['你哋繼續「咁樣」。','呢個係你哋兩個都OK嘅答案 —— 至少，今晚係。','有啲關係唔使即刻有結論。','佢會停留幾耐，冇人知，包括你。']},
+      D:{nars:['你一個人搭咗程天星小輪。','對岸啲燈好靚。你影咗張相，冇send俾任何人。','就咁save喺相簿。','你發現你冇後悔。','唔開始，都可以係一個完整嘅答案。']},
+    },
+  },
+  reportExtra:null,
+},
+
+/* ===== Kay（隨機角色：過度解讀型空服員）===== */
+kay:{
+  key:'kay', name:'Kay', avatar:'K', theme:'kay', status:'上線',
+  ch0:{
+    card:[
+      'Kay，28，空姐。',
+      'Online嘅時候有message就一定秒覆 —— 但你一個「ok」，佢可以諗半個鐘，驚自己係咪講錯嘢。',
+      '佢嘅生活係不停咁 Landing 同 Take off。',
+      '你嘅身邊，係佢唯一想降落嘅地方。',
+    ],
+  },
+  ch1:{
+    sys:'23:47 · 第一章',
+    scene:['你啱啱沖完涼，攤喺床度。手機震咗一下。佢而家喺台北 Layover。'],
+    opener:'你今日點呀？（我啱啱先到酒店 🏨 你唔使即刻覆㗎，早啲唞）',
+    feels:[
+      {t:'攰到散：由朝企到黑，老細臨收工先嚟搵嘢搞',v:1},
+      {t:'嬲到癲：屋企人又係咁，講極都唔聽，諗起都火起',v:2},
+      {t:'個心好空：講唔出點解，就係覺得好寂寞',v:3},
+      {t:'其實幾好',v:4},
+    ],
+    feelName:['攰到散','嬲到癲','個心好空','其實幾好'],
+    truth:[
+      '其實今日好攰，唔係嗰種瞓一覺就好返嘅攰',
+      '今日嬲到癲，屋企嘅事，而家諗起仲嬲',
+      '講唔出點解，今日個心好似空咗一塊咁',
+      '其實今日幾好，啱啱先諗起要話你知',
+    ],
+    replies:[
+      {t:'講真',v:1},
+      {t:'「ok 啦 😅」',v:2,send:'ok 啦 😅'},
+      {t:'「你先啦？飛台北攰唔攰？」',v:3,send:'你先啦？飛台北攰唔攰？'},
+      {t:'（send一個emoji）',v:4,send:'😂'},
+    ],
+    b1:{
+      pre:['（佢輸入中…… 停咗。再輸入中。）','一分鐘後，你手機響 —— 係佢打嚟。'],
+      phone:'喂，聽你把聲就知你唔妥……',
+      post:[],
+    },
+    b2:{
+      pre:['佢見到嗰個「😅」會諗好耐，','輸入中又消失，最後只敢回 ——'],
+      reply:'Ok 就好 😊',
+      ok:['你冇講大話。簡單，都幾好。'],
+      bad:['你知佢諗咗好耐先覆呢三隻字 —— 佢可能唔想overthink你隻「😅」，所以寧願信。','你嘅「唔OK」，冇人知。'],
+    },
+    b3:{
+      nars:['佢會講台北夜市、講啲客幾難頂。你一路聽。','佢嘅世界咁大，你嘅「今日」，暫時未講。'],
+    },
+    b4:{
+      reply:'😂😂 早啲唞',
+      ok:['你冇講大話。簡單，都幾好。'],
+      bad:['之後冇再講嘢。','你望住嗰三個emoji，有啲失落 —— 佢連你「唔OK」，都當你OK。'],
+    },
+  },
+  ch2:{
+    sys:'一個禮拜後 · 星期六 · 第二章',
+    scene:['你哋約咗 15:00。難得佢有個「grounded 嘅 weekend」—— 唔使飛。','你已經換好衫，準備出門。'],
+    opener:'對唔住呀……台北呢邊班機 Delay 咗，我仲喺機場等緊，今晚趕唔返嚟見你 😔 真係好對唔住。',
+    feels:[
+      {t:'好失望：期待咗成個禮拜，連衫都襯好晒',v:1},
+      {t:'鬆一口氣：其實今日狀態麻麻，唔見反而仲放鬆',v:2},
+      {t:'嬲：已經唔係第一次，佢份工好似大過天',v:3},
+      {t:'唔sure：慣咗，已經唔知自己仲有冇感覺',v:4},
+    ],
+    feelName:['好失望','鬆一口氣','嬲','唔sure'],
+    truth:[
+      '我其實有啲失望。唔係嬲你，係我真係好想見你。',
+      '其實我都唔係好想出街。或者係天意，等大家唞下。',
+      '我係有啲嬲。唔係嬲 Delay，係嬲次次都係咁，好似永遠等唔到你咁。',
+      '我唔知點反應。好似已經習慣咗被放飛機咁。',
+    ],
+    replies:[
+      {t:'「冇所謂啦 😊 下次先」',v:1,send:'冇所謂啦 😊 下次先'},
+      {t:'「發生咩事呀？嚴唔嚴重？」',v:2,send:'發生咩事呀？嚴唔嚴重？'},
+      {t:'講出你心入面嗰句',v:3},
+      {t:'「咁聽日呢？我聽日都得」',v:4,send:'咁聽日呢？我聽日都得'},
+    ],
+    b1:{
+      msg:'下次補返你 😊',
+      pre:['佢會覺得你真係「冇所謂」。','心入面反而會 overthink：「佢係咪已經唔在乎我？」'],
+      /* Kay版：呢個分支四個感受都係【霧+1】——照角色劇本 */
+    },
+    b2:{
+      pre:['（已讀。兩分鐘後先回。）'],
+      msg:'……唔算大事，delay啫。',
+      post:['你覺得有啲事情發生。','但你揀咗唔追問。'],
+    },
+    b3:{
+      pre:['（已讀。好耐。）'],
+      msg:'對唔住，我都好想見你。我而家喺候機室，望住張我地合照好想喊。',
+      post:['呢句嘢遲到，但真。'],
+    },
+    b4:{
+      msg:'好呀聽日！我landing就嚟。',
+      nars:[],
+    },
+  },
+  ch3:{
+    sys:'三個禮拜後 · 星期三深夜 · 第三章',
+    scene:['你哋見多咗兩次面。','星期三深夜，佢啱啱飛完長途返香港。','手機震。'],
+    opener:'我諗咗好耐。我成日飛，你嘅goodnight我成日要隔成日先覆到。我驚你覺得我好似網友咁……我又唔知你做緊乜。不如……我哋繼續做朋友？',
+    feels:[
+      {t:'心傷：你想要嘅唔係咁，覺得佢想玩玩下，或者想退縮',v:1},
+      {t:'舒服：唔使交戲，咁樣啱啱好',v:2},
+      {t:'混亂：唔知佢係想放棄，定係想保護呢段關係',v:3},
+      {t:'解脫：終於有人講咗出口',v:4},
+    ],
+    feelName:['心傷','舒服','混亂','解脫'],
+    want:[
+      '我唔係好想要「做朋友」。我想要嘅係戀人嗰種。如果係可以俾機會我，幾難夾我都會試。',
+      '我都覺得咁樣最舒服。',
+      '我仲未諗清楚自己想要咩。但我唔想就咁停喺度。',
+      '多謝你講咗出口。其實我都覺得咁樣最好。',
+    ],
+    replies:[
+      {t:'「ok呀 😊」',v:1,send:'ok呀 😊'},
+      {t:'講出你想要咩',v:2},
+      {t:'「俾我諗一諗，聽日覆你」',v:3,send:'俾我諗一諗，聽日覆你'},
+      {t:'「你講咩呀 😂 我邊有諗過呢啲」',v:4,send:'你講咩呀 😂 我邊有諗過呢啲'},
+    ],
+    b1:{
+      msg:'😊',
+      ok:['你哋繼續「咁樣」。','唔定義，唔代表唔重視。'],
+      bad:['就咁完咗個topic。你哋繼續「咁樣」——','只係你嗰邊嘅答案，同你心入面嗰個，未必係同一個。'],
+    },
+    b2:{
+      pre:'（輸入中…… 停咗。又輸入中。又停咗。）',
+      msg:'……多謝你講真話。你唔係網友。你係我landing嘅原因。',
+      post:['呢句嘢唔完美。但係真。'],
+    },
+    b3:{
+      msg:'好，慢慢諗，唔急。',
+      nars:[],
+    },
+    b4:{
+      msg:'😂 好啦好啦',
+      ok:[],
+      bad:[],
+    },
+  },
+  ch4:{
+    intro:['而家，掉返轉。你係 Kay。','返返去嗰個星期六。','俾你睇下，你嗰日冇講出口嘅嘢。','台北桃園機場。'],
+    truth:[
+      '班機真係 Delay 咗，但你冇講嘅係——',
+      '嗰日你喺機場廁所喊咗好耐。',
+      '唔係因為 Delay，係因為你覺得好無力。',
+      '你喺飛機上面照顧咗幾百個人，但落咗機，你連想見一個人都做唔到。',
+      '你驚佢會覺得你煩，所以你覆咗句「對唔住」。',
+    ],
+    replay:{
+      r1:['你望住「冇所謂啦 😊」。','你鬆一口氣 —— 佢冇嬲。','然後你諗：我喊緊，都覆「下次補返你 😊」。','原來我連自己嘅失落，都排喺佢嘅情緒後面。'],
+      r2:['你望住「發生咩事呀？」','你打「我喺酒店房喊」。望咗一陣。del咗。','你覆「冇事，delay啫」。'],
+      r3:null,
+      r4:['你望住「不如聽日？」','你覆「好呀，我landing就嚟」。','然後你開始諗：聽日見面嗰陣，點樣先唔會一見到佢就喊出嚟。'],
+    },
+    backSys:'【而家，返返嚟。你仍然係Kay。今晚】',
+    tonight:[
+      '你望住同佢個 chat，打咗一行字：「嗰日我其實喺機場喊咗好耐，我覺得自己好似冇咗根咁。」',
+      '你個手指停咗喺 send 上面。',
+      '你係全機最好笑容嘅空服 —— 但「唔開心」呢三隻字，冇降落嘅地方。',
+      '（呢個選擇唔計入你嘅天氣報告，只係一面鏡）',
+    ],
+    choices:[
+      {t:'Del 咗佢：「唔好俾壓力人，自己消化啦。」',v:1},
+      {t:'Send 咗：「嗰晚唔係因為 delay。遲啲話你知。」',v:2,send:'嗰晚唔係因為 delay。遲啲話你知。'},
+      {t:'Send 咗：「嗰晚我喺酒店房喊。唔係 delay。係我突然諗起，我以爲我已經習慣一直漂泊，但原來我仲會期待有一個可以一落地就接住我嘅人。」',v:3,send:'嗰晚我喺酒店房喊。唔係 delay。係我突然諗起，我以爲我已經習慣一直漂泊，但原來我仲會期待有一個可以一落地就接住我嘅人。'},
+    ],
+    d1:['你鎖屏。','你冇講嘅嘢唔會消失，佢會喺度等。','等你下一個layover，下一次再爆煲嗰晚。'],
+    d2:{pre:['你send咗。'],msg:'唔急。你OK嗎？',post:['你望住呢三隻字，唔知點解，個心一直狂跳。']},
+    d3:{pre:['你send咗。然後閉埋眼等。'],msg:'而家好返啲未？',post:['冇質問，冇「點解你頭先收我線」。','你哋就咁，由呢句嘢開始，講返嗰一晚。']},
+  },
+  ch5:{
+    sys:'一個月後 · 中環碼頭 · 傍晚 · 最終章',
+    scene:['佢約你出嚟「傾下嘢」。','佢今日冇飛，特登調咗更見你。','海風好大。佢望住隻船，唔係望住你。'],
+    choices:[
+      {t:'「我想試下認真一齊。雖然你成日飛，但我願意等。」',v:'A',send:'我想試下認真一齊。雖然你成日飛，但我願意等。'},
+      {t:'「我發現我接受唔到呢種節奏。我想停喺度。」',v:'B',send:'我發現我接受唔到呢種節奏。我想停喺度。'},
+      {t:'「而家咁樣幾好。」',v:'C',send:'而家咁樣幾好。'},
+      {t:'「我都係想留返啲時間俾自己。」',v:'D',send:'我都係想留返啲時間俾自己。'},
+    ],
+    endings:{
+      A:{msgs:['……我都想。仲有 —— 我每次landing，第一個通知嘅，永遠都想係你。'],nars:['拍拖唔係童話。','係兩個唔識講嘢嘅人，慢慢學識講。','你哋一齊嘅第一個月，佢喺一萬米高空學識咗一句嘢：','「我唔OK。」','落咗地，講俾你聽。']},
+      B:{nars:['你喺碼頭望住佢行遠。','唔係每段相遇都要有結局。','有啲人出現，係為咗話你知：你想成為人哋降落嘅地方，都要識得自己起飛。','手機震，係佢喺機場send嘅：「起飛喇。照顧自己 🌏」','雨停咗。']},
+      C:{nars:['你哋繼續「咁樣」。','唔係冇諗過將來，係你哋講明咗：而家仲未需要答案。','佢繼續飛，你繼續等佢landing。有日你哋可能會再傾。','有啲關係唔使即刻有結論。呢個係你哋兩個都揀咗嘅答案。']},
+      D:{nars:['你一個人搭咗程天星小輪。','對岸啲燈好靚。你影咗張相，冇send俾任何人。','就咁save喺相簿。','你發現你冇後悔。','唔開始，都可以係一個完整嘅答案。']},
+    },
+    /* 結局A條件句：如果你第4章揀咗Del咗 */
+    aCond:'（佢講呢句嘅時候，佢唔知你收埋過嘢。你自己知。）',
+    reminder:'（記住：理解佢嘅苦衷，唔等於你有責任承受失約，或者繼續呢段關係。）',
+  },
+  reportExtra:{
+    storm:'你以為專業嘅微笑可以解決一切，但其實你心入面嗰場雨，一直都冇停過。',
+    fog:'你哋之間隔住咗成萬呎高空嘅雲層。如果你唔講真話，佢永遠都降落唔到喺你心入面。',
+    sun:'原來最遠嘅距離唔係台北同香港，而係我企喺你面前，但你唔敢講你唔開心。',
+  },
+},
+/* ===== Carlos（補償型金融男）===== */
+carlos:{"key": "carlos", "name": "Carlos", "avatar": "L", "theme": "carlos", "status": "Online", "ch0": {"card": ["Carlos，29，金融，中環人。", "Schedule 排到密麻麻 —— 但你隨口提過一次嘅餐廳，佢記到而家。", "唔識示愛。但識 book 枱、識 call 車、識安排晒一切。"]}, "ch1": {"sys": "23:47 · 第一章", "scene": ["你啱沖完涼，攤喺床度。手機震咗一下。", "Carlos send 嘢嚟 —— 你成日都諗，佢點解可以咁好，自己好似冇點被佢需要過。"], "opener": "你鍾唔鍾意我 lunchtime 買俾你嗰杯 strawberry matcha latte？我見你 ig like 咗好多間。btw 我 book 咗聽日晚餐——你上禮拜話想試嗰間 😏", "feels": [{"t": "攰到散：返足九個鐘，加埋同事陰啲陰啲俾說話自己聽", "v": 1}, {"t": "嬲到癲：又同屋企人嘈，諗起仲嬲", "v": 2}, {"t": "個心空空：明明身邊有家人朋友，但都覺得好孤獨", "v": 3}, {"t": "其實幾好", "v": 4}], "feelName": ["攰到散", "嬲到癲", "個心空空", "其實幾好"], "truth": ["其實今日好攰，唔係嗰種瞓一覺就好返嘅攰", "今日嬲到癲，屋企嘅事，而家諗起仲嬲", "講唔出點解，但今日個心好空……", "今日係遇到好多好事嘅一日，啱啱先打算話你知！"], "replies": [{"t": "講真", "v": 1}, {"t": "「ok 啦 ~~」", "v": 2, "send": "ok 啦 ~~"}, {"t": "「你先啦？你今日點啊？攰唔攰啊？」", "v": 3, "send": "你先啦？你今日點啊？攰唔攰啊？"}, {"t": "（send 一個可愛 sticker）", "v": 4, "send": "🥰"}], "b1": {"pre": ["（佢輸入中…… 停咗。再輸入中。）"], "phone": ["咁今晚早啲休息啦，聽日我安排好晒。", "屋企嘅事真係難搞……你想講我聽。", "我唔知點幫你，但我喺度。", "咁就好！聽日晚餐見。"], "post": ["佢努力想回應你，但總係習慣先諗點樣幫你搞掂。"]}, "b2": {"reply": "ok 就夠。聽日見 😘", "ok": ["你冇講大話。簡單，都幾好。"], "bad": ["佢真係信咗。或者信咗佢想信嗰部分。", "你嘅「唔 OK」，冇人知。"]}, "b3": {"reply": "今日都係客、會議、個市，忙到暈。你呢？", "nars": ["佢講佢中環嘅一日：客、會議、個市。你一路聽。", "佢問返「你呢？」嘅時候，你已經覺得眼瞓。", "你嗰 part，暫時未講。"]}, "b4": {"reply": "😘😘 See u tmr", "ok": ["簡單，都幾好。"], "bad": ["之後冇再講嘢。你望住個 chat，有啲失落 —— 佢連你「唔 OK」都當你 OK。"]}}, "ch2": {"sys": "一個禮拜後 · 星期六 · 第二章", "scene": ["你哋約咗 19:00 —— 佢 book 咗嗰間「你話想試」嘅餐廳。", "18:02。手機震。"], "opener": "對唔住……client 個飯局真係甩唔到身 😔 唔好意思", "afterOpener": ["五分鐘後，門鐘響。", "係佢訂嘅外賣 —— 係你之前上網見到有人推介嗰間小店，仲有張手寫卡片：「聽日補返。」", "你嘅失落，被一份外賣截住咗。", "或者 —— 被推遲咗。"], "feels": [{"t": "好失望：你期待咗成個禮拜", "v": 1}, {"t": "鬆一口氣：你其實唔知點解，可能驚真人見面唔知點開口傾 deep 啲", "v": 2}, {"t": "嬲：次次都係咁，物質根本彌補唔到", "v": 3}, {"t": "唔 sure：分唔清自己咩感覺", "v": 4}], "feelName": ["好失望", "鬆一口氣", "嬲", "唔 sure"], "truth": ["我其實有啲唔開心。唔係嬲你，只係我真係好想見你。不過你忙先啦！", "其實我都唔係一定要去。我驚真人見面冇嘢傾。", "你忙先啦！就係唔知點解次次都係咁，我覺得我哋離得好遠。", "Ummm…好啦，再覆返你。"], "replies": [{"t": "「冇所謂啦 😊 下次先，記得忙完要休息啊！」", "v": 1, "send": "冇所謂啦 😊 下次先，記得忙完要休息啊！"}, {"t": "「發生咩事呀？嚴唔嚴重？」", "v": 2, "send": "發生咩事呀？嚴唔嚴重？"}, {"t": "講出你心入面嗰句", "v": 3}, {"t": "「咁聽日見？」", "v": 4, "send": "咁聽日見？"}], "b1": {"msg": "OK 😅 聽日補返你", "pre": [], "f2": ["你真係覺得 OK。"], "f4": ["你唔知自己想唔想去，所以「好啦」講得格外順。"], "f3": ["物質根本彌補唔到，但你冇講出口。"], "f1": ["你一個人食嗰份外賣。佢唔知你失望 —— 佢以為外賣送到＝處理咗。"]}, "b2": {"pre": ["（已讀。兩分鐘後先回。）"], "msg": "……唔算大事。聽日再補返場 date 俾你。", "post": ["你嗅到呢句嘢有啲唔完整。", "但你揀咗唔追問 —— 佢都「補償」咗，追落去好似好唔識做。"]}, "b3": {"pre": ["（已讀。好耐。）"], "msg": "……對唔住。我都想見你。唔係用外賣嗰種。", "post": ["呢句嘢冇秒覆，但係真心話。"]}, "b4": {"msg": "好呀聽日！", "nars": ["覆得好快。快到你懷疑佢係咪一早諗定今日會甩底。"]}}, "ch3": {"sys": "三個禮拜後 · 星期三 23:15 · 第三章", "scene": ["你哋見咗兩次面。", "第二次，佢安排晒成個下晝 —— 你一次都冇拎過個銀包出嚟。", "但你開始發現：你唔知佢「今日點呀」嘅答案。", "星期三，23:15。手機震。"], "opener": "有樣嘢想講。我發現自己應承你嘅事好似越嚟越做唔好。但我真係想繼續見你、同你一齊開心。不如……我哋分開先？我唔想見到你失望。", "feels": [{"t": "煩憂：你想要嘅唔係咁，點解依段關係會變成咁", "v": 1}, {"t": "舒服：唔使交戲，啱啱好", "v": 2}, {"t": "混亂：你想要啲咩，你自己都唔知", "v": 3}, {"t": "解脫：終於有人講咗出口", "v": 4}], "feelName": ["煩憂", "舒服", "混亂", "解脫"], "want": ["其實我唔需要你喺呢段關係一直顧慮我…我想要嘅係我哋兩個都因為彼此而變得幸福。", "分開…分開都好。不過想話你知，分開，唔代表我有討厭過你。", "我唔想…點解…我唔知啊…可唔可以見多一次面先再決定？", "多謝你講咗出口。我其實都覺得咁樣比較好。"], "replies": [{"t": "「ok 呀 😊」", "v": 1, "send": "ok 呀 😊"}, {"t": "講出你想要咩", "v": 2}, {"t": "「俾我諗一諗，聽日覆你」", "v": 3, "send": "俾我諗一諗，聽日覆你"}, {"t": "「你講咩呀 😂 你係咪 OT O 到傻咗」", "v": 4, "send": "你講咩呀 😂 你係咪 OT O 到傻咗"}], "b1": {"msg": "😊", "ok": ["你哋分開咗，但偶爾諗起對方都會問候彼此，分享有趣嘅小事。"], "bad": ["就咁默認結束咗依段關係。", "只係你嗰邊嘅答案，同你心入面嗰個，未必係同一個。"]}, "b2": {"pre": "（輸入中…… 停咗。又輸入中。又停咗。）", "msg": "……好。我盡量試吓。", "post": ["「盡量」唔係「好」。", "但由佢願意嘗試，已經行前咗一大步。"]}, "b3": {"msg": "好，慢慢諗，唔急。", "nars": []}, "b4": {"msg": "Okok, all the best!", "ok": [], "bad": []}}, "ch4": {"intro": ["而家，掉返轉。你係 Carlos。", "返返去嗰個星期六。", "俾你睇下，你嗰日冇講出口嘅嘢。"], "truth": ["公司冇 client 飯局。", "係你朝早交嘅 report 出咗大錯，俾上頭當住成條 team 鬧咗十五分鐘。", "你入行五年，冇試過咁「唔掂」。", "你唔想話佢知。你由細到大都係咁：唔掂嘅嘢，自己執返掂，唔可以俾人見到。", "你打「對唔住今晚去唔到，公司有啲事」。打咗，睇下，del 咗。又打，又 del 咗。", "你最後 send 咗「client 飯局」—— 工作嘅藉口，最唔使解釋。", "然後你即刻訂咗外賣送上佢度。", "因為除咗「安排好一切」，你唔識點表達內心。"], "replay": {"r1": ["你望住「冇所謂啦 😊」。", "你鬆一口氣 —— 佢冇嬲。", "然後你諗：原來我「唔掂」，都可以被一份外賣帶過。"], "r2": ["你望住「發生咩事呀？」", "你打「report 出錯，俾人鏟到上天花板」。望咗一陣。刪咗。", "你覆「唔算大件事」。"], "r3": [["你望住對方坦白嘅失望，第一次覺得外賣唔可以代替一個解釋。"], ["原來佢都驚見面，你開始明白彼此都有講唔出口嘅嘢。"], ["你望住佢話你哋離得好遠，唔知點樣先可以真正行近。"], ["佢話「再覆返你」，你唔敢追問。"]], "r4": ["你望住「咁聽日見？」", "你覆「好呀」。", "然後你開始諗：聽日之前，點樣收拾好心情。你好驚一見到佢就忍唔住，忍唔住俾佢知自己唔夠好。"]}, "backSys": "【而家，返返嚟。你仍然係 Carlos。今晚】", "tonight": ["你望住同佢個 chat，打咗一行字：「嗰晚……唔係 client 嘅事。」", "你個手指停咗喺 send 上面。", "你諗返起呢排嘅 book 枱、外賣、安排 —— 你第一次問自己：", "付出咁多，係愛佢，定係唔敢俾佢見到「唔掂」嘅你？", "（呢個選擇唔計入天氣報告，只係一面鏡）"], "choices": [{"t": "Del 咗佢：「佢唔使知道我依一面。我搞得掂。」", "v": 1}, {"t": "Send 咗：「嗰晚其實我冇去到個局。遲啲話你知。」", "v": 2, "send": "嗰晚其實我冇去到個局。遲啲話你知。"}, {"t": "Send 咗：「嗰晚我俾人鏟到上天花板。我驚你覺得我冇能力…」", "v": 3, "send": "嗰晚我俾人鏟到上天花板。我驚你覺得我冇能力…"}], "d1": ["你熄咗機。你冇講嘅嘢唔會消失，佢會一直積埋積埋。"], "d2": {"pre": ["你 send 咗。"], "msg": "唔急。你 OK 嗎？", "post": ["你望住呢三隻字，唔知點解，眼濕濕。"]}, "d3": {"pre": ["你 send 咗。"], "msg": "你 OK 嗎？…我唔係問緊你嗰單嘢。我係問緊你。", "post": ["冇質問，冇「點解你頭先呃我」。", "你哋就咁，由呢句嘢開始，講返嗰一晚。"]}}, "ch5": {"sys": "一個月後 · 中環碼頭 · 傍晚 · 最終章", "scene": ["佢約你出嚟「飲杯嘢」。", "海風好大。佢望住隻船，唔係望住你。"], "opening": ["我唔係想問你「我哋而家算咩」。", "我想知 —— 你想要啲咩？"], "choices": [{"t": "「我想你放低做完美男友嘅執念，我同你一齊唔係因為你處處周到，而係因為你係你。」", "v": "A", "send": "我想你放低做完美男友嘅執念，我同你一齊唔係因為你處處周到，而係因為你係你。"}, {"t": "「我想要兩個人坦誠相對，同你而家可以俾嘅唔同。我想喺呢度停。」", "v": "B", "send": "我想要兩個人坦誠相對，同你而家可以俾嘅唔同。我想喺呢度停。"}, {"t": "「我暫時唔想繼續經營關係，想留返啲時間俾自己。」", "v": "D", "send": "我暫時唔想繼續經營關係，想留返啲時間俾自己。"}], "endings": {"A": {"msgs": ["……我都想。多謝你，我……愛你。"], "nars": ["拍拖唔係童話。係兩個人慢慢磨合、了解對方、相信對方、接住對方。", "之後嘅一個月，你哋出少咗出去食，但多咗傾日常大小事，靜靜哋陪喺對方身邊。"]}, "B": {"nars": ["你喺碼頭望住佢行遠。", "唔係每段相遇都要有結局。", "有啲人出現，係為了話你知：你想要嘅唔止係「被安排好」。", "手機震，係佢 send 嘅最後一個 message：「近排雨季，記得帶遮。Take care.」", "你望住，笑咗一下。雨停咗。"]}, "D": {"nars": ["你一個人搭咗程天星小輪。", "對岸啲燈好靚。你影咗張相，冇 send 俾任何人。", "就咁 save 喺相簿。", "你發現你冇後悔。", "唔繼續，都可以係一個完整嘅答案。"]}}, "aCond": "（佢講呢句嘅時候，佢唔知你收埋過嘢。你自己知。）", "reminder": "（記住：理解佢嘅苦衷，唔等於你有責任承受失約，或者繼續呢段關係。）"}, "reportExtra": null},
+
+};
+
+let C = null; // 今次抽中嘅角色
+
+/* ---------- 3. 小工具 ---------- */
+const $  = s => document.querySelector(s);
+const stage = $('#stage'), choicebox = $('#choicebox');
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function scrollDown(){ stage.scrollTop = stage.scrollHeight; }
+function el(cls){ const e=document.createElement('div'); e.className=cls; return e; }
+
+/* 旁白（系統會自動等一陣，俾人睇完先） */
+async function nar(text, cls=''){
+  const d = el('nar '+cls); d.textContent = text;
+  stage.append(d); scrollDown(); await sleep(600); return d;
+}
+
+/* 【系統】提示 */
+async function sys(text){
+  const d = el('sysprompt'); d.textContent = text;
+  stage.append(d); scrollDown(); await sleep(500);
+}
+
+/* 對方「輸入中…」 */
+async function typing(){
+  const w = el('msg L');
+  const t = el('typing');
+  for(let i=0;i<3;i++){ const s=document.createElement('span'); t.append(s); }
+  w.append(t); stage.append(w); scrollDown();
+  await sleep(650 + Math.random()*550);
+  w.remove();
+}
+
+/* 訊息泡：side='L'對方 / 'R'你；name可選（第4章用） */
+async function msg(side, text, name=null){
+  if(side==='L') await typing();
+  else await sleep(250);
+  const w = el('msg '+side);
+  if(name){ const n=el('name'); n.textContent=name; w.append(n); }
+  const b = el('bubble'); b.textContent = text; w.append(b);
+  const m = el('meta'); m.textContent = timeNow(); w.append(m);
+  stage.append(w); scrollDown(); await sleep(400);
+}
+function timeNow(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+/* 天氣徽章 + 記分 */
+async function weather(kind){
+  state.weather[kind]++;
+  const label = {sun:'晴 +1',fog:'霧 +1',storm:'雷雨 +1',damp:'潮濕 +1'}[kind];
+  const icon  = {sun:'☀️',fog:'🌫️',storm:'⛈️',damp:'💧'}[kind];
+  const c = el('chip'); c.textContent = icon+' '+label;
+  stage.append(c); scrollDown(); await sleep(700);
+}
+
+/* 選項：pick('問題',[{t:'按鈕字',v:'值',send:'真係send出去嘅字'}], {side:'L', name:'Kay（你）'})
+   揀完會自動清空按鈕區，傳返個值俾你。
+   side/name 係第4章用：扮佢嗰陣，你send嘅嘢要走左邊。 */
+function pick(prompt, options, cfg={}){
+  return new Promise(async resolve=>{
+    if(prompt) await sys(prompt);
+    for(const o of options){
+      const b = document.createElement('button');
+      b.className='opt'; b.textContent=o.t;
+      b.onclick = async ()=>{
+        choicebox.innerHTML='';
+        if(o.send) await msg(cfg.side||'R', o.send, cfg.name||null);
+        resolve(o.v);
+      };
+      choicebox.append(b);
+    }
+    scrollDown();
+  });
+}
+
+/* 「繼續」掣：俾玩家自己控制閱讀節奏（章節之間用） */
+function cont(label='繼續 →'){
+  return new Promise(resolve=>{
+    const b = document.createElement('button');
+    b.className='opt cont'; b.textContent=label;
+    b.onclick = ()=>{ b.remove(); resolve(); };
+    choicebox.append(b); scrollDown();
+  });
+}
+
+/* 頂部bar改名（第4章視角反轉用） */
+function setHeader(name, status){
+  $('#h-name').textContent = name;
+  $('#h-status').textContent = status;
+}
+
+/* ---------- 4. 章節劇本 ----------
+   每一章都係：旁白 → 對白 → 感受選擇 → 回應選擇 → 結果（按感受變）
+   兩個角色共用同一套流程，字全部由 C（CHARS入面嘅角色）話事。
+   --------------------------------------------------------------- */
+
+async function ch0_intro(){
+  await nar('前世五百次回眸，先換來今生嘅擦肩而過。','big');
+  await nar('但之後嗰一切，唔係緣份。');
+  await nar('係選擇。','big');
+  await sleep(300);
+  await sys('【佢係——】');
+  for(const n of C.ch0.card) await nar(n);
+  await sys('【由今晚開始，你哋嘅故事，由你揀】');
+  await nar('記住：呢個遊戲冇「啱嘅答案」。');
+  await nar('只有「你嘅答案」。');
+}
+
+async function ch1(){
+  await sys(C.ch1.sys);
+  for(const n of C.ch1.scene) await nar(n);
+  await msg('L', C.ch1.opener);
+
+  /* —— 感受選擇 —— */
+  const feel = await pick('【今晚嘅你，其實——】', C.ch1.feels);
+  await nar('（你心入面：'+C.ch1.feelName[feel-1]+'）','feel');
+
+  /* —— 回應選擇：①「講真」嘅字會按你頭先嘅感受變 —— */
+  const truth = C.ch1.truth[feel-1];
+  const replies = C.ch1.replies.map(o => o.v===1 ? {...o, send:truth} : o);
+  const reply = await pick('【你覆——】', replies);
+
+  /* —— 結果（按感受分支） —— */
+  const B = C.ch1;
+  if(reply===1){
+    for(const n of B.b1.pre) await nar(n);
+    const ph = Array.isArray(B.b1.phone) ? B.b1.phone[feel-1] : B.b1.phone;
+    await msg('L', ph);
+    for(const n of B.b1.post) await nar(n);
+    await weather('sun');
+  }
+  else if(reply===2){
+    if(B.b2.pre) for(const n of B.b2.pre) await nar(n);
+    await msg('L', B.b2.reply);
+    if(feel===4){
+      for(const n of B.b2.ok) await nar(n);
+      await weather('sun');
+    }else{
+      for(const n of B.b2.bad) await nar(n);
+      if(feel===2){ await weather('fog'); await weather('storm'); }
+      else await weather('fog');
+    }
+  }
+  else if(reply===3){
+    if(B.b3.reply) await msg('L', B.b3.reply);
+    for(const n of B.b3.nars) await nar(n);
+    await weather('damp');
+  }
+  else{
+    await msg('L', B.b4.reply);
+    if(feel===4){
+      for(const n of B.b4.ok) await nar(n);
+      await weather('sun');
+    }else{
+      for(const n of B.b4.bad) await nar(n);
+      await weather('fog');
+    }
+  }
+}
+
+async function ch2(){
+  await sys(C.ch2.sys);
+  for(const n of C.ch2.scene) await nar(n);
+  await msg('L', C.ch2.opener);
+  if(C.ch2.afterOpener){for(const n of C.ch2.afterOpener) await nar(n);}
+  else {await nar('你望住個mon。');await nar('期待咗成個禮拜嘅嘢，原來可以一個訊息就冇咗。');}
+
+  const feel = await pick('【呢一刻，你——】', C.ch2.feels);
+  await nar('（你心入面：'+C.ch2.feelName[feel-1]+'）','feel');
+  state.ch2_feel = feel; // 記低，第4章回調要用
+
+  /* 「講真」嘅字會按你頭先嘅感受變 —— 咁先至真係「講出你自己嗰句」 */
+  const truth2 = C.ch2.truth[feel-1];
+  const opts = C.ch2.replies.map(o => ({...o, send: o.v===3 ? truth2 : o.send}));
+  const reply = await pick('【你覆——】', opts);
+  state.ch2_reply = reply;      // 記低，第4章要回調
+  state.ch2_send = opts[reply-1].send; // 記低實際send咗嗰句，第4章原句重播
+
+  /* —— 結果（按感受分支） —— */
+  const B = C.ch2;
+  if(reply===3){ /* 講出心入面嗰句 */
+    if(B.b3.perFeel){ /* 阿Chak：按感受四個版本 */
+      const b = B.b3.perFeel[feel-1];
+      for(const n of b.pre) await nar(n);
+      for(const m of b.msgs) await msg('L', m);
+      for(const n of b.post) await nar(n);
+    }else{ /* Kay：一句過 */
+      for(const n of B.b3.pre) await nar(n);
+      await msg('L', B.b3.msg);
+      for(const n of B.b3.post) await nar(n);
+    }
+    await weather('sun');
+  }
+  else if(reply===1){ /* 「冇所謂啦」 */
+    await msg('L', B.b1.msg);
+    for(const n of B.b1.pre) await nar(n);
+    if(C.key==='kay'){ /* Kay版：四個感受都係霧（照角色劇本） */
+      await weather('fog');
+    }
+    else if(feel===2){
+      for(const n of B.b1.f2) await nar(n);
+      await weather('sun');
+    }
+    else if(feel===4){
+      for(const n of B.b1.f4) await nar(n);
+      await weather('damp');
+    }
+    else if(feel===3){
+      for(const n of B.b1.f3) await nar(n);
+      await weather('fog'); await weather('storm');
+    }
+    else{
+      for(const n of B.b1.f1) await nar(n);
+      await weather('fog');
+    }
+  }
+  else if(reply===2){ /* 問發生咩事 */
+    for(const n of B.b2.pre) await nar(n);
+    await msg('L', B.b2.msg);
+    for(const n of B.b2.post) await nar(n);
+    if(feel===2){ if(B.b2.f2) for(const n of B.b2.f2) await nar(n); await weather('sun'); }
+    else if(feel===4){ await weather('damp'); }
+    else if(feel===3){ if(B.b2.f1) for(const n of B.b2.f1) await nar(n); await weather('fog'); await weather('storm'); }
+    else{
+      if(B.b2.f1) for(const n of B.b2.f1) await nar(n);
+      await weather('fog');
+    }
+  }
+  else{ /* 約第二次 */
+    await msg('L', B.b4.msg);
+    for(const n of B.b4.nars) await nar(n);
+    if(feel===2){ await weather('sun'); }
+    else if(feel===4){ await weather('damp'); }
+    else if(feel===3){ await weather('fog'); await weather('storm'); }
+    else{ await weather('fog'); }
+  }
+}
+
+async function ch3(){
+  await sys(C.ch3.sys);
+  for(const n of C.ch3.scene) await nar(n);
+  await msg('L', C.ch3.opener);
+
+  const feel = await pick('【你望住呢句嘢——】', C.ch3.feels);
+  await nar('（你心入面：'+C.ch3.feelName[feel-1]+'）','feel');
+
+  /* 「講出你想要咩」同樣按感受變 —— 唔會叫你send一句唔係你心聲嘅嘢 */
+  const want = C.ch3.want[feel-1];
+  const opts = C.ch3.replies.map(o => ({...o, send: o.v===2 ? want : o.send}));
+  const reply = await pick('【你覆——】', opts);
+
+  const B = C.ch3;
+  if(reply===1){
+    await msg('L', B.b1.msg);
+    if(feel===2){
+      for(const n of B.b1.ok) await nar(n);
+      await weather('sun');
+    }else{
+      for(const n of B.b1.bad) await nar(n);
+      await weather('fog');
+    }
+  }
+  else if(reply===2){
+    await nar(B.b2.pre);
+    if(B.b2.perFeel){ /* 阿Chak：按感受四個版本 */
+      const b = B.b2.perFeel[feel-1];
+      for(const m of b.msgs) await msg('L', m);
+      for(const n of b.post) await nar(n);
+    }else{ /* Kay：一句過 */
+      await msg('L', B.b2.msg);
+      for(const n of B.b2.post) await nar(n);
+    }
+    await weather('sun');
+  }
+  else if(reply===3){
+    await msg('L', B.b3.msg);
+    for(const n of B.b3.nars) await nar(n);
+    await weather('damp');
+  }
+  else{
+    await msg('L', B.b4.msg);
+    if(B.b4.pre) await nar(B.b4.pre);
+    if(feel===4){
+      for(const n of B.b4.ok) await nar(n);
+      await weather('sun');
+    }else{
+      for(const n of B.b4.bad) await nar(n);
+      await weather('fog');
+    }
+  }
+}
+
+async function ch4(){
+  await sys('視角反轉 · 第四章');
+  setHeader(C.name+'（你）', '而家，你係'+C.name);
+  await nar('而家，掉返轉。','big');
+  for(const n of C.ch4.intro) await nar(n);
+  await sleep(400);
+  for(const n of C.ch4.truth) await nar(n);
+  await sleep(400);
+
+  await nar('然後，佢覆咗——');
+  /* —— 回調：重播玩家第2章嘅實際send字（原句） —— */
+  const r = state.ch2_reply;
+  const f = state.ch2_feel;
+  await msg('R', state.ch2_send, '佢');
+  const RP = C.ch4.replay;
+  if(r===1){ for(const n of RP.r1) await nar(n); }
+  else if(r===2){ for(const n of RP.r2) await nar(n); }
+  else if(r===3){
+    if(RP.r3) for(const n of RP.r3[f-1]) await nar(n); /* 阿Chak：按感受嘅內心戲 */
+  }
+  else{ for(const n of RP.r4) await nar(n); }
+  await sleep(400);
+
+  await sys(C.ch4.backSys);
+  for(const n of C.ch4.tonight) await nar(n);
+
+  /* 扮佢：你send嘅嘢走左邊（L），姓名標示「XX（你）」 */
+  const reply = await pick('【你——】', C.ch4.choices, {side:'L', name:C.name+'（你）'});
+  state.ch4_reply = reply;
+
+  if(reply===1){
+    for(const n of C.ch4.d1) await nar(n);
+  }else if(reply===2){
+    for(const n of C.ch4.d2.pre) await nar(n);
+    await msg('R', C.ch4.d2.msg, '佢');
+    for(const n of C.ch4.d2.post) await nar(n);
+  }else{
+    for(const n of C.ch4.d3.pre) await nar(n);
+    await msg('R', C.ch4.d3.msg, '佢');
+    for(const n of C.ch4.d3.post) await nar(n);
+  }
+}
+
+async function ch5(){
+  await sys(C.ch5.sys);
+  setHeader(C.name, C.status);
+  for(const n of C.ch5.scene) await nar(n);
+  for(const line of (C.ch5.opening || ['我唔係想問你「我哋算咩」。','我想知 —— 你想要啲咩？'])) await msg('L',line);
+  await nar('你講出口嗰句，就係你嘅答案。');
+  await nar(C.ch5.choices.length===3?'（三個結局，冇高低分。）':'（四個結局，冇高低分。）','feel');
+  if(C.ch5.reminder) await nar(C.ch5.reminder,'feel');
+
+  const ending = await pick('【你話——】', C.ch5.choices);
+  state.ending = ending;
+  await sleep(600);
+
+  /* —— 統一結局格式：對方回覆（如有）→ 旁白 —— */
+  const E = C.ch5.endings[ending];
+  if(E.msgs){
+    await nar('（輸入中……）');
+    for(const m of E.msgs) await msg('L', m);
+    if(C.ch5.aCond && ending==='A' && state.ch4_reply===1){
+      await nar(C.ch5.aCond);
+    }
+  }
+  for(const n of E.nars) await nar(n);
+}
+
+/* ---------- 5. 天氣報告 ----------
+   v1.3：總結句加廣東歌歌詞；Kay版另有一句角色總結放喺歌詞前。
+   注意：一次遊戲入面每種天氣最多記3次，所以「霧」嘅門檻係 ≥3（劇本寫嘅 ≥4 其實行唔到） */
+function summaryParts(){
+  const w = state.weather;
+  if(w.storm>=2) return {kind:'storm',q:'過盡千帆皆不是', s:'《Sabrina之淚》', l:'一直收埋嘅情緒，無論對你，抑或對方，都係不吐，不快。'};
+  if(w.fog>=3)   return {kind:'fog',  q:'浮浮沉浮浮沉沉', s:'《當兵的自我修養》', l:'你嘅天氣報告入面，霧多過晴。唔緊要 —— 霧，始終會散。'};
+  if(w.sun>=3)   return {kind:'sun',  q:'真心經過試驗才知真的不會變', s:'《重回那天那地》', l:'放低心中防線，先會坦然講出可能會傷害對方嘅真話。'};
+  if(w.damp>=3)  return {kind:'damp', q:'原來戀愛統統統統寫得太多，令我澄明而愛的很少', s:'《寫得太多》', l:'唔sure都係一種答案。唔係所有感覺都要即刻有結論。'};
+  return {kind:'default', q:'無論陰晴，愛永遠存在。', s:'', l:'無需擔心佢會消失，無需懷疑自己，因為佢紮根於本能。'};
+}
+
+async function showReport(){
+  await cont('睇你嘅情緒天氣報告 →');
+  await sleep(300);
+  const w = state.weather;
+  const p = summaryParts();
+  const extra = (C.reportExtra && C.reportExtra[p.kind]) || null; /* Kay：歌詞前嗰句 */
+  const rep = document.createElement('div');
+  rep.id='report';
+  rep.innerHTML = `
+    <h2>你嘅戀愛情緒天氣報告</h2>
+    <div class="grid">
+      <div class="wcard"><span class="icon">☀️</span><span class="n">${w.sun}</span><span class="lab">晴 · 講真話</span></div>
+      <div class="wcard"><span class="icon">🌫️</span><span class="n">${w.fog}</span><span class="lab">霧 · 收埋</span></div>
+      <div class="wcard"><span class="icon">⛈️</span><span class="n">${w.storm}</span><span class="lab">雷雨 · 嬲但冇出口</span></div>
+      <div class="wcard"><span class="icon">💧</span><span class="n">${w.damp}</span><span class="lab">潮濕 · 唔sure</span></div>
+    </div>
+    <p class="summary">${extra?'<span class="kayline">'+extra+'</span>':''}<span class="lyric">${p.q}</span>${p.s ? '<span class="song">——' + p.s + '</span>' : ''}<br>${p.l}</p>
+    <p class="fine">呢個係藝術體驗，唔係心理評估。<br>你嘅情緒，你自己先係專家。</p>
+    <div class="expo">
+      <p>而家，歡迎喺2026年12.12–12.20到訪逸東酒店。</p>
+      <p>探索愛情同自我之間嘅關係。</p>
+    </div>
+    <div class="row">
+      <button id="again-btn">再玩一次</button>
+      <button id="copy-btn">複製總結</button>
+    </div>`;
+  document.body.append(rep);
+  $('#again-btn').onclick = ()=>location.reload();
+  $('#copy-btn').onclick = async ()=>{
+    const p = summaryParts();
+    const text = `【冇所謂啦】我嘅戀愛情緒天氣報告：晴×${w.sun} 霧×${w.fog} 雷×${w.storm} 潮×${w.damp} —— ${extra?extra+' ':''}${p.q}${p.s ? '（' + p.s + '）' : ''}${p.l}`;
+    try{ await navigator.clipboard.writeText(text); $('#copy-btn').textContent='複製咗 ✓'; }
+    catch{ $('#copy-btn').textContent='長按截圖分享啦'; }
+  };
+}
+
+/* ---------- 6. 主流程：開波 ----------
+   每章之間有「繼續」掣，節奏由玩家話事。
+   角色隨機抽；用 #kay / #chak / #carlos 開波可以強制指定（測試/示範用）。 */
+let started = false;
+$('#start-btn').onclick = async ()=>{
+  if(started) return; started = true; /* 防止撳兩下開咗兩局 */
+  const hash = (location.hash||'').replace('#','').toLowerCase();
+  C = CHARS[hash] || CHARS[Object.keys(CHARS)[Math.floor(Math.random()*Object.keys(CHARS).length)]];
+  document.body.classList.toggle('kay', C.key==='kay'); /* Kay：灰藍+白主題 */
+  document.body.classList.toggle('carlos', C.key==='carlos');
+  $('#avatar').textContent = C.avatar;
+  setHeader(C.name, C.status);
+  $('#title').remove();
+  await ch0_intro();
+  await cont();
+  await ch1();
+  await cont();
+  await ch2();
+  await cont();
+  await ch3();
+  await cont();
+  await ch4();
+  await cont();
+  await ch5();
+  await showReport();
+};
+
+/* 開波前：如果 link 有 #kay / #chak / #carlos，標題畫面預先顯示嗰個角色 */
+(()=>{
+  const h=(location.hash||'').replace('#','').toLowerCase();
+  const c=CHARS[h];
+  if(c){
+    document.body.classList.toggle('kay', c.key==='kay');
+    document.body.classList.toggle('carlos', c.key==='carlos');
+    $('#avatar').textContent=c.avatar;
+    setHeader(c.name,c.status);
+  }
+})();
+</script>
+</body>
+</html>
