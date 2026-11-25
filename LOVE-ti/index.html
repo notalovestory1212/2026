@@ -44,6 +44,12 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--pink-deep);font-weight:500}
 .brand .dot{width:9px;height:9px;background:var(--pink);border-radius:50%;box-shadow:0 0 0 4px rgba(212,23,103,.14);animation:blink 1.6s steps(2) infinite}
 .barcode{height:22px;width:96px;background:repeating-linear-gradient(90deg,var(--pink) 0 2px,transparent 2px 4px,var(--pink) 4px 5px,transparent 5px 9px,var(--pink) 9px 12px,transparent 12px 14px);opacity:.8}
+.top-right{display:flex;align-items:center;gap:14px}
+.lang-switch{display:flex;border:1.5px solid var(--pink);background:#fff;box-shadow:2px 2px 0 var(--pink-soft)}
+.lang-btn{border:0;background:transparent;color:var(--pink-deep);font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:6px 9px;cursor:pointer;line-height:1;transition:background .16s,color .16s}
+.lang-btn+button{border-left:1px solid var(--line)}
+.lang-btn:hover{background:var(--pink-pale)}
+.lang-btn.active{background:var(--pink);color:#fff;font-weight:500}
 @keyframes blink{50%{opacity:.25}}
 
 /* ---------- screens ---------- */
@@ -105,8 +111,8 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .m-mid{display:grid;grid-template-columns:1fr 108px;gap:12px;margin:14px 0}
 .m-wave{border:1.5px solid var(--line);background:repeating-linear-gradient(90deg,transparent 0 13px,rgba(212,23,103,.09) 13px 14px),repeating-linear-gradient(0deg,transparent 0 13px,rgba(212,23,103,.09) 13px 14px);height:150px;position:relative;overflow:hidden;display:grid;place-items:center}
 .m-wave svg{width:100%;height:100%}
-.ecg{fill:none;stroke:var(--pink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:520;stroke-dashoffset:520;animation:ecgDraw 3.4s linear infinite}
-@keyframes ecgDraw{0%{stroke-dashoffset:520}70%,100%{stroke-dashoffset:-520}}
+.ecg-base{fill:none;stroke:var(--pink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.25}
+.ecg{fill:none;stroke:var(--pink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .m-stats{display:flex;flex-direction:column;gap:8px}
 .stat{border:1.5px solid var(--line);padding:7px 8px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em}
 .stat b{display:block;font-size:16px;color:var(--pink);letter-spacing:0;margin-top:3px}
@@ -179,10 +185,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 .pct-badge{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:36px;height:36px;border-radius:50%;background:#fff;border:2px solid rgba(212,23,103,.28);display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--pink-deep);box-shadow:0 2px 5px rgba(142,11,69,.12)}
 .pct-badge.bl{left:1px}
 .pct-badge.br{right:1px}
-.side-label{position:absolute;top:50%;transform:translateY(-50%);z-index:2;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;white-space:nowrap;color:var(--muted)}
-.side-label.ll{left:43px}
-.side-label.rl{right:43px;text-align:right}
-.side-label.on-fill{color:#fff}
+.side-label{position:absolute;top:50%;transform:translateY(-50%);z-index:2;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;white-space:nowrap;color:var(--muted);background:rgba(255,255,255,.92);padding:2px 4px;border-radius:4px}
+.side-label.ll{left:40px}
+.side-label.rl{right:40px;text-align:right}
+.side-label.on-fill{color:#fff;background:transparent;padding:0}
 @media(max-width:560px){
   .slider-bar{height:38px}
   .pct-badge{width:34px;height:34px;font-size:11px}
@@ -240,7 +246,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand"><span class="dot"></span>LOVE-TI SYSTEM <span style="color:var(--muted)">/ ONLINE</span></div>
-    <div class="barcode" aria-hidden="true"></div>
+    <div class="top-right">
+      <div class="lang-switch" id="langSwitch" role="group" aria-label="language"></div>
+      <div class="barcode" aria-hidden="true"></div>
+    </div>
   </div>
 </header>
 
@@ -274,6 +283,7 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
         <div class="m-mid">
           <div class="m-wave">
             <svg viewBox="0 0 300 150" preserveAspectRatio="none">
+              <path class="ecg-base" d="M0 78 H38 l9 0 l7 -16 l9 47 l8 -31 l8 0 H96 l8 0 l7 -16 l9 47 l8 -31 l8 0 H158 l9 0 l7 -16 l9 47 l8 -31 l8 0 H222 l8 0 l7 -16 l9 47 l8 -31 l8 0 H300"/>
               <path class="ecg" d="M0 78 H38 l9 0 l7 -16 l9 47 l8 -31 l8 0 H96 l8 0 l7 -16 l9 47 l8 -31 l8 0 H158 l9 0 l7 -16 l9 47 l8 -31 l8 0 H222 l8 0 l7 -16 l9 47 l8 -31 l8 0 H300"/>
             </svg>
             <div id="pixelHeart" style="position:absolute;display:grid;place-items:center;opacity:.16"></div>
@@ -339,18 +349,48 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
    ========================================================= */
 const IMAGE = code => `assets/mascots/${code}.png`;
 const C = window.LOVE_TI_CONTENT;
-const QUESTIONS = C.questions;
-const BONUS = C.bonus;
-const TYPES = C.types;
-const UI = C.ui;
+let LANG = localStorage.getItem('loveti-lang') || C.defaultLang;
+if(!C.langs[LANG]) LANG = C.defaultLang;
+let DATA = C.langs[LANG];
+let QUESTIONS = DATA.questions;
+let BONUS = DATA.bonus;
+let TYPES = DATA.types;
+let UI = DATA.ui;
+let TRAIT = DATA.TRAIT;
 const DIMS = [['D','L'],['P','C'],['R','S']];
-const TRAIT = {D:'感性', L:'理性', P:'獨立', C:'連結', R:'儀式感', S:'隨性'};
 let currentCode = 'DPR';
 
 // 把 content.js 的文字填入頁面
-document.querySelectorAll('[data-text]').forEach(el=>{ el.textContent = UI[el.dataset.text] ?? ''; });
-document.querySelectorAll('[data-html]').forEach(el=>{ el.innerHTML = UI[el.dataset.html] ?? ''; });
-document.querySelectorAll('[data-exhibition-link]').forEach(el=>{ el.href = UI.exhibitionUrl; });
+function fillTexts(root){
+  const scope = root || document;
+  scope.querySelectorAll('[data-text]').forEach(el=>{ el.textContent = UI[el.dataset.text] ?? ''; });
+  scope.querySelectorAll('[data-html]').forEach(el=>{ el.innerHTML = UI[el.dataset.html] ?? ''; });
+  scope.querySelectorAll('[data-exhibition-link]').forEach(el=>{ el.href = UI.exhibitionUrl; });
+}
+fillTexts();
+
+/* ---------- 語言切換 ---------- */
+function buildLangSwitch(){
+  const box=document.getElementById('langSwitch');
+  box.innerHTML = C.order.map(code=>`<button type="button" class="lang-btn${code===LANG?' active':''}" data-lang="${code}">${C.langs[code].short}</button>`).join('');
+  box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>setLanguage(btn.dataset.lang)));
+}
+function setLanguage(code){
+  if(!C.langs[code] || code===LANG) return;
+  LANG = code; DATA = C.langs[code];
+  QUESTIONS = DATA.questions; BONUS = DATA.bonus; TYPES = DATA.types; UI = DATA.ui; TRAIT = DATA.TRAIT;
+  localStorage.setItem('loveti-lang', LANG);
+  document.documentElement.lang = LANG==='zh-Hans' ? 'zh-CN' : (LANG==='en' ? 'en' : 'zh-Hant');
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('active', b.dataset.lang===LANG));
+  fillTexts();
+  const active = document.querySelector('.screen.active');
+  if(active && active.id==='quiz'){ phase==='bonus' ? renderBonus() : renderQuestion(); }
+  if(active && active.id==='result') renderResult(currentCode);
+  if(active && active.id==='loadingScreen') document.getElementById('loadingText').textContent = UI.loadingText;
+  if(UI.toastLang) toast(UI.toastLang);
+}
+document.documentElement.lang = LANG==='zh-Hans' ? 'zh-CN' : (LANG==='en' ? 'en' : 'zh-Hant');
+buildLangSwitch();
 
 // 果凍彈跳：點擊選項或人格圖時彈一下
 function jelly(el){
@@ -593,9 +633,7 @@ function renderResult(code){
       <button class="btn ghost small" onclick="startQuiz()" data-html="retryBtn"></button>
       <button class="btn ghost small" onclick="show('hero')" data-html="homeBtn"></button>
     </div>`;
-  document.querySelectorAll('#resultContent [data-html]').forEach(el=>{ el.innerHTML = UI[el.dataset.html] ?? ''; });
-  document.querySelectorAll('#resultContent [data-text]').forEach(el=>{ el.textContent = UI[el.dataset.text] ?? ''; });
-  document.querySelectorAll('#resultContent [data-exhibition-link]').forEach(el=>{ el.href = UI.exhibitionUrl; });
+  fillTexts(document.getElementById('resultContent'));
   show('result');
 }
 
@@ -658,7 +696,7 @@ async function buildShareCanvas(code){
   for(let y=0;y<1350;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(1080,y);ctx.stroke();}
   ctx.strokeStyle='#d41767'; ctx.lineWidth=6; ctx.strokeRect(30,30,1020,1290);
   ctx.fillStyle='#8e0b45'; ctx.font='900 54px "Noto Sans TC",sans-serif'; ctx.fillText('LOVE-ti',72,118);
-  ctx.fillStyle='#d41767'; ctx.font='500 22px "DM Mono",monospace'; ctx.fillText('LOVE PERSONALITY TEST',74,154);
+  ctx.fillStyle='#d41767'; ctx.font='500 22px "DM Mono",monospace'; ctx.fillText(UI.canvasTitle||'LOVE PERSONALITY TEST',74,154);
   let img=null; try{ img=await loadImage(IMAGE(code)); }catch(e){}
   if(img){
     const scale=Math.min(540/img.width,470/img.height);
@@ -676,23 +714,31 @@ async function buildShareCanvas(code){
   ctx.fillStyle='#8c6a7b'; ctx.font='22px "DM Mono",monospace';
   ctx.fillText('〈'+t.song+'〉唱：'+t.singer+'　曲：'+(t.composer||'')+'　詞：'+t.lyricist,540,985);
   ctx.fillStyle='#d41767'; ctx.font='500 24px "DM Mono",monospace';
-  ctx.fillText('測測你的戀愛人格 →',540,1075);
+  ctx.fillText(UI.canvasTestHint||'測測你的戀愛人格 →',540,1075);
   ctx.font='500 21px "DM Mono",monospace';
   ctx.fillText(location.href.length>58?location.href.slice(0,55)+'...':location.href,540,1112);
-  // 展覽宣傳
-  ctx.fillStyle='#fff'; ctx.fillRect(90,1145,900,130);
-  ctx.strokeStyle='#d41767'; ctx.lineWidth=3; ctx.strokeRect(90,1145,900,130);
-  ctx.fillStyle='#8e0b45'; ctx.font='700 23px "Noto Sans TC",sans-serif';
-  ctx.fillText(UI.exhibitionSlogan,540,1180);
+  // 展覽宣傳（長標語自動縮字，避免溢出）
+  const fitFont=(text,maxW,start,min,style,family)=>{
+    let size=start;
+    ctx.font=`${style} ${size}px ${family}`;
+    while(ctx.measureText(text).width>maxW && size>min){ size--; ctx.font=`${style} ${size}px ${family}`; }
+    return size;
+  };
+  ctx.fillStyle='#fff'; ctx.fillRect(90,1138,900,132);
+  ctx.strokeStyle='#d41767'; ctx.lineWidth=3; ctx.strokeRect(90,1138,900,132);
+  fitFont(UI.exhibitionSlogan,850,23,15,'700','"Noto Sans TC",sans-serif');
+  ctx.fillStyle='#8e0b45'; ctx.fillText(UI.exhibitionSlogan,540,1170);
   ctx.save();
   ctx.shadowColor='#ffd3e5'; ctx.shadowOffsetX=3; ctx.shadowOffsetY=3;
-  ctx.fillStyle='#8e0b45'; ctx.font='900 29px "Noto Sans TC",sans-serif';
-  ctx.fillText(UI.exhibitionTitle,540,1218);
+  fitFont(UI.exhibitionTitle,850,29,18,'900','"Noto Sans TC",sans-serif');
+  ctx.fillStyle='#8e0b45'; ctx.fillText(UI.exhibitionTitle,540,1207);
   ctx.restore();
-  ctx.fillStyle='#8c6a7b'; ctx.font='19px "DM Mono",monospace';
-  ctx.fillText(UI.exhibitionDate+'　'+UI.exhibitionVenue,540,1255);
-  ctx.fillStyle='#8c6a7b'; ctx.font='20px "DM Mono",monospace';
-  ctx.fillText('LOVE-TI · 僅供娛樂參考',540,1305);
+  fitFont(UI.exhibitionDate+'　'+UI.exhibitionVenue,850,19,13,'','"DM Mono",monospace');
+  ctx.fillStyle='#8c6a7b'; ctx.fillText(UI.exhibitionDate+'　'+UI.exhibitionVenue,540,1242);
+  ctx.fillStyle='#d41767'; ctx.font='500 19px "DM Mono",monospace';
+  ctx.fillText(UI.canvasIgHint||'追蹤展覽 IG ↗',540,1292);
+  ctx.fillStyle='#8c6a7b'; ctx.font='16px "DM Mono",monospace';
+  ctx.fillText(UI.canvasDisclaimer||'LOVE-TI · 僅供娛樂參考',540,1312);
   ctx.textAlign='left';
   return canvas;
 }
@@ -746,6 +792,12 @@ async function shareImage(){
   cells.forEach((r,y)=>r.forEach((on,x)=>{ if(on) html+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#d41767"/>`; }));
   qr.innerHTML=html+'</svg>';
 
+  const ecg=document.querySelector('.ecg');
+  if(ecg && ecg.getTotalLength && ecg.animate){
+    const len=Math.ceil(ecg.getTotalLength()), seg=130;
+    ecg.style.strokeDasharray=`${seg} ${len+seg+20}`;
+    ecg.animate([{strokeDashoffset:seg},{strokeDashoffset:-(len+seg)}],{duration:3200,iterations:Infinity,easing:'linear'});
+  }
   setInterval(()=>{ document.getElementById('bpm').textContent=(80+Math.floor(Math.random()*16))+' BPM'; },2200);
 })();
 </script>
