@@ -16,7 +16,7 @@ window.LOVE_TI_CONTENT = (function(){
   ui: {
     eyebrow: '♥ 3 DIMENSIONS · 8 PERSONALITIES',
     subtitle: '戀愛人格測試 &nbsp;/&nbsp; Love Personality Test',
-    introHTML: '<p>在這個快節奏的時代，我們聽過太多關於愛的道理，卻依然在每一次的心動與心碎裡，笨拙地<b>在愛裡摸索自己的形狀</b>。</p><p>LOVE-ti 圍繞<b>身份認同</b>（獨立 vs 連結）、<b>情感表達</b>（理性 vs 感性）及<b>生活方式</b>（儀式感 vs 隨性）三個維度，把親密關係中的人格劃分成 8 種類型。</p><p>點擊測驗，測出你的專屬人格代碼和歌詞！</p>',
+    introHTML: '<p>在這個快節奏的時代，我們聽過太多關於愛的道理，卻依然在每一次的心動與心碎裡，笨拙地<b>在愛裡摸索自己的模樣</b>。</p><p>LOVE-ti 圍繞<b>身份認同</b>（獨立 vs 連結）、<b>情感表達</b>（理性 vs 感性）及<b>生活方式</b>（儀式感 vs 隨性）三個維度，把親密關係中的人格劃分成 8 種類型。</p><p>點擊測驗，測出你的專屬人格代碼和歌詞！</p>',
     disclaimer: '（本人格測試非心理學專業測評工具，結果僅供娛樂參考）',
     startBtn: '▶ &nbsp;開始測試',
     quizTitle: '戀愛人格測驗',
